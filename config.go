@@ -150,12 +150,31 @@ func bootstrapConfig() {
 		}
 	}
 	if feeds != nil {
-			for _, feed := range feeds.([]any) {
-				url, limit := getFeedAndLimit(feed.(string))
-				myFeeds = append(myFeeds, RSS{url: url, limit: limit})
+		for _, feed := range feeds.([]any) {
+			url, limit := getFeedAndLimit(feed.(string))
+			myFeeds = append(myFeeds, RSS{url: url, limit: limit})
+		}
+	}
+	if viper.IsSet("translate_prompt") {
+		translatePrompt = viper.Get("translate_prompt").(string)
+	}
+	if viper.IsSet("translate_feeds") {
+		translateFeeds := viper.Get("translate_feeds")
+
+		for _, translateFeed := range translateFeeds.([]any) {
+			url, limit := getFeedAndLimit(translateFeed.(string))
+			var found bool = false
+			for i, feed := range myFeeds {
+				if feed.url == url {
+					myFeeds[i].translate = true
+					found = true
+				}
+			}
+			if !found {
+				myFeeds = append(myFeeds, RSS{url: url, limit: limit, translate: true})
 			}
 		}
-
+	}
 	if viper.IsSet("google_news_keywords") {
 		googleNewsKeywords := url.QueryEscape(viper.Get("google_news_keywords").(string))
 		if googleNewsKeywords != "" {
@@ -205,11 +224,6 @@ func bootstrapConfig() {
 	err = applyMigrations(db)
 	if err != nil {
 		log.Println("Coudn't apply migrations:", err)
-	}
-
-	if !terminalMode {
-		markdown_file_name := mdPrefix + currentDate + mdSuffix + ".md"
-		os.Remove(filepath.Join(markdownDirPath, markdown_file_name))
 	}
 }
 

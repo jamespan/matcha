@@ -29,11 +29,13 @@ var sunrise_sunset bool
 var myFeeds []RSS
 var db *sql.DB
 var summaryPrompt string
+var translatePrompt string
 
 type RSS struct {
 	url       string
 	limit     int
 	summarize bool
+	translate bool
 }
 
 type Writer interface {
@@ -84,7 +86,7 @@ func (w MarkdownWriter) writeFavicon(s *gofeed.Feed) string {
 		return "🍵"
 
 	} else {
-		u, err := url.Parse(s.FeedLink)
+		u, err := url.Parse(s.Link)
 		if err != nil {
 			fmt.Println(err)
 		}
@@ -168,6 +170,9 @@ func generateFeedItems(w Writer, feed *gofeed.Feed, rss RSS) string {
 			continue
 		}
 		title, link := getFeedTitleAndLink(item)
+		if rss.translate {
+			title = translate(title)
+		}
 		if summary == "" {
 			summary = getSummary(rss, item, link)
 		}
@@ -233,10 +238,7 @@ func getSummary(rss RSS, item *gofeed.Item, link string) string {
 		return ""
 	}
 
-	summary := getSummaryFromLink(link)
-	if summary == "" {
-		summary = item.Description
-	}
+	summary := summarize(item.Description)
 
 	return summary
 }
